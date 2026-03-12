@@ -60,8 +60,11 @@ display:none;
 <button onclick="addBookmark()">Add Bookmark</button>
 <button onclick="exportBookmarks()">Export</button>
 
-<input id="search" placeholder="Search..." oninput="searchBookmarks()">
+<input id="search" placeholder="Search">
 
+<button onclick="performSearch()">Search</button>
+<button onclick="prevResult()">Prev</button>
+<button onclick="nextResult()">Next</button>
 </div>
 
 <div id="tree"></div>
@@ -71,19 +74,19 @@ display:none;
 
 <script>
 
-/* PUT YOUR FIREBASE CONFIG HERE */
-
 const firebaseConfig={
-apiKey:"AIzaSyBMPgm00jLjptTgGRkiFsPZqk6iaRcY0oE",
-authDomain:"bookmark-dashboard-nag.firebaseapp.com",
-projectId:"bookmark-dashboard-nag"
+apiKey:"YOUR_KEY",
+authDomain:"YOUR_DOMAIN",
+projectId:"YOUR_PROJECT"
 }
 
 firebase.initializeApp(firebaseConfig)
-
 const db=firebase.firestore()
 
 let data=[]
+let activeFolderIndex=null
+let searchResults=[]
+let currentSearchIndex=0
 
 
 function fixUrl(url){
@@ -166,34 +169,58 @@ folderDiv.className="folder"
 
 folderDiv.innerHTML="📁 "+folder.name
 
-let children=document.createElement("div")
+if(activeFolderIndex===fIndex){
+folderDiv.style.background="#dbeafe"
+}
 
+let children=document.createElement("div")
 children.className="hidden"
 
 folderDiv.onclick=()=>{
-children.classList.toggle("hidden")
+
+activeFolderIndex=fIndex
+render()
+
 }
 
 folder.children.forEach((b,bIndex)=>{
 
 let row=document.createElement("div")
-
 row.className="bookmark"
 
 let icon=document.createElement("img")
-
 icon.src=favicon(b.url)
 
 let link=document.createElement("a")
-
 link.href=b.url
-
 link.target="_blank"
-
 link.textContent=b.name
 
-row.appendChild(icon)
+let del=document.createElement("button")
+del.textContent="❌"
+del.style.marginLeft="8px"
 
+del.onclick=async(e)=>{
+
+e.stopPropagation()
+
+if(confirm("Delete bookmark?")){
+
+data[fIndex].children.splice(bIndex,1)
+
+await saveBookmarks()
+
+render()
+
+}
+
+}
+
+row.appendChild(icon)
+row.appendChild(link)
+row.appendChild(del)
+
+row.appendChild(icon)
 row.appendChild(link)
 
 children.appendChild(row)
@@ -201,7 +228,6 @@ children.appendChild(row)
 })
 
 tree.appendChild(folderDiv)
-
 tree.appendChild(children)
 
 })
@@ -221,7 +247,6 @@ children:[]
 })
 
 await saveBookmarks()
-
 render()
 
 }
@@ -229,14 +254,13 @@ render()
 
 async function addBookmark(){
 
-if(data.length===0){
-alert("Create a folder first")
+if(activeFolderIndex===null){
+
+alert("Select a folder first")
+
 return
+
 }
-
-let folderNames=data.map((f,i)=>i+" : "+f.name).join("\n")
-
-let folderIndex=prompt("Select folder:\n"+folderNames)
 
 let name=prompt("Bookmark name")
 
@@ -246,44 +270,94 @@ if(!name||!url)return
 
 url=fixUrl(url)
 
-data[folderIndex].children.push({
+data[activeFolderIndex].children.push({
 name:name,
 url:url
 })
 
 await saveBookmarks()
-
 render()
 
 }
 
 
-function searchBookmarks(){
+function performSearch(){
 
 let term=document.getElementById("search").value.toLowerCase()
 
-document.querySelectorAll(".bookmark").forEach(b=>{
+searchResults=[]
 
-let text=b.innerText.toLowerCase()
+data.forEach((folder,fIndex)=>{
 
-b.style.display=text.includes(term)?"block":"none"
+folder.children.forEach((b,bIndex)=>{
+
+if(b.name.toLowerCase().includes(term) ||
+b.url.toLowerCase().includes(term)){
+
+searchResults.push({fIndex,bIndex})
+
+}
 
 })
+
+})
+
+currentSearchIndex=0
+
+highlightSearchResult()
 
 }
 
 
-function exportBookmarks(){
+function highlightSearchResult(){
 
-let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"})
+if(searchResults.length===0) return
 
-let a=document.createElement("a")
+let result=searchResults[currentSearchIndex]
 
-a.href=URL.createObjectURL(blob)
+activeFolderIndex=result.fIndex
 
-a.download="bookmarks.json"
+render()
 
-a.click()
+let tree=document.getElementById("tree")
+
+let children=tree.children[result.fIndex*2+1]
+
+children.classList.remove("hidden")
+
+let bookmark=children.children[result.bIndex]
+
+bookmark.style.background="#fde68a"
+
+}
+
+
+function nextResult(){
+
+if(searchResults.length===0) return
+
+currentSearchIndex++
+
+if(currentSearchIndex>=searchResults.length){
+currentSearchIndex=0
+}
+
+highlightSearchResult()
+
+}
+
+
+function prevResult(){
+
+if(searchResults.length===0) return
+
+currentSearchIndex--
+
+if(currentSearchIndex<0){
+currentSearchIndex=searchResults.length-1
+}
+
+highlightSearchResult()
 
 }
 
@@ -291,6 +365,5 @@ a.click()
 loadBookmarks()
 
 </script>
-
 </body>
 </html>
