@@ -81,9 +81,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBMPgm00jLjptTgGRkiFsPZqk6iaRcY0oE",
-    authDomain: "bookmark-dashboard-nag.firebaseapp.com",
-    projectId: "bookmark-dashboard-nag"
+apiKey: "AIzaSyBMPgm00jLjptTgGRkiFsPZqk6iaRcY0oE",
+authDomain: "bookmark-dashboard-nag.firebaseapp.com",
+projectId: "bookmark-dashboard-nag"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -91,73 +91,124 @@ const db = getFirestore(app);
 
 let data = [];
 
-async function load(){
-    const ref = doc(db,"bookmarks","main");
-    const snap = await getDoc(ref);
-    if(snap.exists()){
-        data = snap.data().items;
-    }else{
-        data = [];
-    }
-    render();
+async function load() {
+
+  const ref = doc(db,"bookmarks","main");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    data = snap.data().items;
+  } else {
+    data = [];
+  }
+
+  render();
 }
 
-async function save(){
-    await setDoc(doc(db,"bookmarks","main"),{
-    items:data});
-
+async function save() {
+  await setDoc(doc(db,"bookmarks","main"), {
+    items: data
+  });
 }
 
-function favicon(url){
-    let domain=new URL(url).hostname;
-    return "https://www.google.com/s2/favicons?domain="+domain;
+function favicon(url) {
+  let domain = new URL(url).hostname;
+  return "https://www.google.com/s2/favicons?domain=" + domain;
 }
 
-function render(){
-    let container=document.getElementById("tree");
-    container.innerHTML="";
-    data.forEach((folder,fIndex)=>{
-        let f=document.createElement("div");
-        f.className="folder";
-        f.textContent="📁 "+folder.name;
-        let list=document.createElement("div");
-        f.onclick=()=>list.classList.toggle("hidden");
-        container.appendChild(f);
-        container.appendChild(list);
-        folder.children.forEach((b,bIndex)=>{
-            let row=document.createElement("div");
-            row.className="bookmark";
-            let icon=document.createElement("img");
-            icon.src=favicon(b.url);
-            let link=document.createElement("a");
-            link.href=b.url;
-            link.target="_blank";
-            link.textContent=b.name;
-            row.appendChild(icon);
-            row.appendChild(link);
-            list.appendChild(row);
-        });
+function render() {
+
+  const container = document.getElementById("tree");
+  container.innerHTML = "";
+
+  data.forEach((folder, fIndex) => {
+
+    const folderDiv = document.createElement("div");
+    folderDiv.className = "folder";
+    folderDiv.textContent = "📁 " + folder.name;
+
+    const childrenDiv = document.createElement("div");
+    childrenDiv.style.marginLeft = "20px";
+    childrenDiv.style.display = "none";
+
+    folderDiv.addEventListener("click", () => {
+      if (childrenDiv.style.display === "none") {
+        childrenDiv.style.display = "block";
+      } else {
+        childrenDiv.style.display = "none";
+      }
     });
 
+    folder.children.forEach((bookmark, bIndex) => {
+
+      const row = document.createElement("div");
+      row.className = "bookmark";
+
+      const icon = document.createElement("img");
+      icon.src = favicon(bookmark.url);
+      icon.width = 16;
+
+      const link = document.createElement("a");
+      link.href = bookmark.url;
+      link.target = "_blank";
+      link.textContent = bookmark.name;
+      link.style.marginLeft = "6px";
+
+      row.appendChild(icon);
+      row.appendChild(link);
+
+      childrenDiv.appendChild(row);
+
+    });
+
+    container.appendChild(folderDiv);
+    container.appendChild(childrenDiv);
+
+  });
+
 }
 
-window.addFolder=async function(){
-    let name=prompt("Folder name");
-    if(!name)return;
-    data.push({name,children:[]});
-    await save();
-    render();
-}
+window.addFolder = async function() {
 
-window.addBookmark=async function(){
-    let name=prompt("Bookmark name");
-    let url=prompt("URL");
-    if(!name||!url)return;
-    data[0].children.push({name,url});
-    await save();
-    render();
-   }
-    load();
+  let name = prompt("Folder name");
+
+  if (!name) return;
+
+  data.push({
+    name: name,
+    children: []
+  });
+
+  await save();
+  render();
+
+};
+
+window.addBookmark = async function() {
+
+  if (data.length === 0) {
+    alert("Create a folder first");
+    return;
+  }
+
+  let folderIndex = prompt("Folder index (0-" + (data.length-1) + ")");
+  let name = prompt("Bookmark name");
+  let url = prompt("URL");
+
+  if (!name || !url) return;
+
+  data[folderIndex].children.push({
+    name,
+    url
+  });
+
+  await save();
+  render();
+
+};
+
+load();
+
 </script>
 </body>
 </html>
