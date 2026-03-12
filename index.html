@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Bookmark Dashboard</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6fb;
+margin:20px;
+}
+
+h2{
+margin-bottom:10px;
+}
+
+#toolbar{
+margin-bottom:15px;
+}
+
+button{
+padding:6px 12px;
+margin-right:5px;
+}
+
+#search{
+padding:6px;
+width:200px;
+}
+
+.folder{
+font-weight:bold;
+cursor:pointer;
+margin-top:10px;
+}
+
+.bookmark{
+display:flex;
+align-items:center;
+margin-left:20px;
+margin-top:4px;
+}
+
+.bookmark img{
+width:16px;
+height:16px;
+margin-right:6px;
+}
+
+a{
+text-decoration:none;
+color:#1a73e8;
+}
+
+.hidden{
+display:none;
+}
+
+.dragging{
+opacity:0.4;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>My Bookmark Dashboard</h2>
+
+<div id="toolbar">
+<button onclick="addFolder()">Add Folder</button>
+<button onclick="addBookmark()">Add Bookmark</button>
+<button onclick="exportBookmarks()">Export</button>
+<input type="file" onchange="importBookmarks(event)">
+<input id="search" placeholder="Search..." oninput="searchBookmarks()">
+</div>
+
+<div id="tree"></div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "PASTE_YOUR_KEY",
+authDomain: "PASTE",
+projectId: "PASTE"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let data = [];
+
+async function load(){
+
+const ref = doc(db,"bookmarks","main");
+
+const snap = await getDoc(ref);
+
+if(snap.exists()){
+
+data = snap.data().items;
+
+}else{
+
+data = [];
+
+}
+
+render();
+
+}
+
+async function save(){
+
+await setDoc(doc(db,"bookmarks","main"),{
+
+items:data
+
+});
+
+}
+
+function favicon(url){
+
+let domain=new URL(url).hostname;
+
+return "https://www.google.com/s2/favicons?domain="+domain;
+
+}
+
+function render(){
+
+let container=document.getElementById("tree");
+
+container.innerHTML="";
+
+data.forEach((folder,fIndex)=>{
+
+let f=document.createElement("div");
+
+f.className="folder";
+
+f.textContent="📁 "+folder.name;
+
+let list=document.createElement("div");
+
+f.onclick=()=>list.classList.toggle("hidden");
+
+container.appendChild(f);
+
+container.appendChild(list);
+
+folder.children.forEach((b,bIndex)=>{
+
+let row=document.createElement("div");
+
+row.className="bookmark";
+
+let icon=document.createElement("img");
+
+icon.src=favicon(b.url);
+
+let link=document.createElement("a");
+
+link.href=b.url;
+
+link.target="_blank";
+
+link.textContent=b.name;
+
+row.appendChild(icon);
+
+row.appendChild(link);
+
+list.appendChild(row);
+
+});
+
+});
+
+}
+
+window.addFolder=async function(){
+
+let name=prompt("Folder name");
+
+if(!name)return;
+
+data.push({name,children:[]});
+
+await save();
+
+render();
+
+}
+
+window.addBookmark=async function(){
+
+let name=prompt("Bookmark name");
+
+let url=prompt("URL");
+
+if(!name||!url)return;
+
+data[0].children.push({name,url});
+
+await save();
+
+render();
+
+}
+
+load();
+
+</script>
+
+</script>
+
+</body>
+</html>
