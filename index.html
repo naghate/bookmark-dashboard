@@ -164,6 +164,103 @@ tree.innerHTML=""
 data.forEach((folder,fIndex)=>{
 
 let folderDiv=document.createElement("div")
+folderDiv.className="folder"
+folderDiv.innerHTML="📁 "+folder.name
+
+if(activeFolderIndex===fIndex){
+folderDiv.style.background="#dbeafe"
+}
+
+let children=document.createElement("div")
+children.className="hidden"
+
+folderDiv.onclick=()=>{
+
+activeFolderIndex=fIndex
+
+if(children.classList.contains("hidden")){
+children.classList.remove("hidden")
+}else{
+children.classList.add("hidden")
+}
+
+renderHighlight()
+
+}
+
+folder.children.forEach((b,bIndex)=>{
+
+let row=document.createElement("div")
+row.className="bookmark"
+
+let icon=document.createElement("img")
+icon.src=favicon(b.url)
+
+let link=document.createElement("a")
+link.href=b.url
+link.target="_blank"
+link.textContent=b.name
+
+let del=document.createElement("button")
+del.textContent="❌"
+del.style.marginLeft="8px"
+
+del.onclick=async(e)=>{
+
+e.stopPropagation()
+
+if(confirm("Delete bookmark?")){
+
+data[fIndex].children.splice(bIndex,1)
+
+await saveBookmarks()
+
+render()
+
+}
+
+}
+
+row.appendChild(icon)
+row.appendChild(link)
+row.appendChild(del)
+
+children.appendChild(row)
+
+})
+
+tree.appendChild(folderDiv)
+tree.appendChild(children)
+
+})
+
+renderHighlight()
+
+}
+
+function renderHighlight(){
+
+const folders=document.querySelectorAll(".folder")
+
+folders.forEach((f,i)=>{
+
+if(i===activeFolderIndex){
+f.style.background="#dbeafe"
+}else{
+f.style.background=""
+}
+
+})
+
+}
+
+const tree=document.getElementById("tree")
+
+tree.innerHTML=""
+
+data.forEach((folder,fIndex)=>{
+
+let folderDiv=document.createElement("div")
 
 folderDiv.className="folder"
 
@@ -219,9 +316,6 @@ render()
 row.appendChild(icon)
 row.appendChild(link)
 row.appendChild(del)
-
-row.appendChild(icon)
-row.appendChild(link)
 
 children.appendChild(row)
 
