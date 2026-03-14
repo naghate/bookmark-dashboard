@@ -6,38 +6,44 @@
 
 <style>
 body{
-font-family:Arial;
+font-family:Arial, sans-serif;
 font-size:12px;
-margin:10px;
+margin:8px;
 background:#f4f6fb;
 }
 
 #toolbar{
-margin-bottom:10px;
+margin-bottom:8px;
 }
 
 button{
-margin-right:4px;
-padding:3px 6px;
-font-size:12px;
+font-size:11px;
+padding:2px 6px;
+margin-right:3px;
+cursor:pointer;
 }
 
 #search{
-padding:3px;
-width:150px;
-font-size:12px;
+font-size:11px;
+padding:2px;
+width:140px;
 }
 
 .folder{
 font-weight:bold;
 cursor:pointer;
 margin-top:2px;
-padding:2px 4px;
+padding:1px 3px;
+border-radius:3px;
+}
+
+.folder:hover{
+background:#eef2ff;
 }
 
 .bookmark{
-margin-left:14px;
-margin-top:2px;
+margin-left:16px;
+margin-top:1px;
 line-height:1.2;
 }
 
@@ -170,7 +176,37 @@ data.forEach((folder,fIndex)=>{
 
 let folderDiv=document.createElement("div")
 folderDiv.className="folder"
-folderDiv.innerHTML="📁 "+folder.name
+folderDiv.innerHTML="▶ 📁 "+folder.name
+
+if(folder.children.length===0){
+
+let del=document.createElement("button")
+del.textContent="🗑"
+del.style.marginLeft="6px"
+
+del.onclick=async(e)=>{
+
+e.stopPropagation()
+
+if(confirm("Delete empty folder?")){
+
+data.splice(fIndex,1)
+
+if(activeFolderIndex===fIndex){
+activeFolderIndex=null
+}
+
+await saveBookmarks()
+
+render()
+
+}
+
+}
+
+folderDiv.appendChild(del)
+
+}
 
 if(activeFolderIndex===fIndex){
 folderDiv.style.background="#dbeafe"
@@ -269,7 +305,7 @@ let folderDiv=document.createElement("div")
 
 folderDiv.className="folder"
 
-folderDiv.innerHTML="📁 "+folder.name
+folderDiv.innerHTML="▶ 📁 "+folder.name
 
 if(activeFolderIndex===fIndex){
 folderDiv.style.background="#dbeafe"
