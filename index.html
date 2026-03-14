@@ -1,501 +1,473 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
-<title>Bookmark Dashboard</title>
+    <meta charset="UTF-8">
+    <title>Bookmark Dashboard</title>
 
-<style>
-body{
-font-family:Arial, sans-serif;
-font-size:12px;
-margin:8px;
-background:#f4f6fb;
-}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 8px;
+            background: #f4f6fb;
+        }
 
-#toolbar{
-margin-bottom:8px;
-}
+        #toolbar {
+            margin-bottom: 8px;
+        }
 
-button{
-font-size:11px;
-padding:2px 6px;
-margin-right:3px;
-cursor:pointer;
-}
+        button {
+            font-size: 11px;
+            padding: 2px 6px;
+            margin-right: 3px;
+            cursor: pointer;
+        }
 
-#search{
-font-size:11px;
-padding:2px;
-width:140px;
-}
+        #search {
+            font-size: 11px;
+            padding: 2px;
+            width: 140px;
+        }
 
-.folder{
-font-weight:bold;
-cursor:pointer;
-margin-top:2px;
-padding:1px 3px;
-border-radius:3px;
-}
+        .folder {
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 2px;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
 
-.folder:hover{
-background:#eef2ff;
-}
+        .folder:hover {
+            background: #eef2ff;
+        }
 
-.bookmark{
-margin-left:16px;
-margin-top:1px;
-line-height:1.2;
-}
+        .bookmark {
+            margin-left: 16px;
+            margin-top: 1px;
+            line-height: 1.2;
+        }
 
-.bookmark img{
-width:10px;
-height:10px;
-margin-right:4px;
-vertical-align:middle;
-}
+        .bookmark img {
+            width: 10px;
+            height: 10px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
 
-.hidden{
-display:none;
-}
+        .hidden {
+            display: none;
+        }
 
-</style>
+        #inputPanel {
+            background: #eef2ff;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
 </head>
 
 <body>
 
-<h2>Bookmark Dashboard</h2>
+    <h2>Bookmark Dashboard</h2>
 
-<div id="toolbar">
+    <div id="toolbar">
 
-<button onclick="addFolder()">Add Folder</button>
-<button onclick="addBookmark()">Add Bookmark</button>
-<button onclick="exportBookmarks()">Export</button>
+        <button onclick="addFolder()">Add Folder</button>
+        <button onclick="addBookmark()">Add Bookmark</button>
+        <button onclick="exportBookmarks()">Export</button>
 
-<input id="search" placeholder="Search">
+        <input id="search" placeholder="Search">
 
-<button onclick="performSearch()">Search</button>
-<button onclick="prevResult()">Prev</button>
-<button onclick="nextResult()">Next</button>
-</div>
+        <button onclick="performSearch()">Search</button>
+        <button onclick="prevResult()">Prev</button>
+        <button onclick="nextResult()">Next</button>
+    </div>
 
-<div id="tree"></div>
+    <div id="inputPanel" style="display:none;margin-bottom:8px">
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+        Name:
+        <input id="bmName" size="15">
 
-<script>
+        URL:
+        <input id="bmUrl" size="25">
 
-const firebaseConfig={
-apiKey:"AIzaSyBMPgm00jLjptTgGRkiFsPZqk6iaRcY0oE",
-authDomain:"bookmark-dashboard-nag.firebaseapp.com",
-projectId:"bookmark-dashboard-nag"
-}
+        <button onclick="saveBookmarkInput()">Save</button>
+        <button onclick="cancelInput()">Cancel</button>
 
-firebase.initializeApp(firebaseConfig)
-const db=firebase.firestore()
+    </div>
 
-let data=[]
-let activeFolderIndex=null
-let searchResults=[]
-let currentSearchIndex=0
+    <div id="tree"></div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
-function fixUrl(url){
+    <script>
 
-if(!url.startsWith("http://") && !url.startsWith("https://")){
-return "https://"+url
-}
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMPgm00jLjptTgGRkiFsPZqk6iaRcY0oE",
+            authDomain: "bookmark-dashboard-nag.firebaseapp.com",
+            projectId: "bookmark-dashboard-nag"
+        }
 
-return url
-}
+        firebase.initializeApp(firebaseConfig)
+        const db = firebase.firestore()
 
+        let data = []
+        let activeFolderIndex = null
+        let searchResults = []
+        let currentSearchIndex = 0
 
-function favicon(url){
 
-try{
-return "https://www.google.com/s2/favicons?domain="+(new URL(url)).hostname
-}catch{
-return ""
-}
+        function fixUrl(url) {
 
-}
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                return "https://" + url
+            }
 
+            return url
+        }
 
-async function loadBookmarks(){
+        function favicon(url) {
+            try {
+                return "https://www.google.com/s2/favicons?domain=" + (new URL(url)).hostname
+            } catch {
+                return ""
+            }
 
-let doc=await db.collection("bookmarks").doc("main").get()
+        }
 
-if(doc.exists){
 
-data=doc.data().items
+        async function loadBookmarks() {
 
-}else{
+            let doc = await db.collection("bookmarks").doc("main").get()
 
-data=[
-{
-name:"Work",
-children:[
-{name:"Gmail",url:"https://mail.google.com"},
-{name:"Drive",url:"https://drive.google.com"}
-]
-},
-{
-name:"Tools",
-children:[
-{name:"ChatGPT",url:"https://chat.openai.com"},
-{name:"GitHub",url:"https://github.com"}
-]
-}
-]
+            if (doc.exists) {
 
-saveBookmarks()
+                data = doc.data().items
 
-}
+            } else {
 
-render()
+                data = [
+                    {
+                        name: "Work",
+                        children: [
+                            { name: "Gmail", url: "https://mail.google.com" },
+                            { name: "Drive", url: "https://drive.google.com" }
+                        ]
+                    },
+                    {
+                        name: "Tools",
+                        children: [
+                            { name: "ChatGPT", url: "https://chat.openai.com" },
+                            { name: "GitHub", url: "https://github.com" }
+                        ]
+                    }
+                ]
 
-}
+                saveBookmarks()
 
+            }
 
-async function saveBookmarks(){
+            render()
 
-await db.collection("bookmarks").doc("main").set({
-items:data
-})
+        }
 
-}
 
+        async function saveBookmarks() {
 
-function render(){
+            await db.collection("bookmarks").doc("main").set({
+                items: data
+            })
 
-const tree=document.getElementById("tree")
+        }
 
-tree.innerHTML=""
 
-data.forEach((folder,fIndex)=>{
+        function render() {
 
-let folderDiv=document.createElement("div")
-folderDiv.className="folder"
-folderDiv.innerHTML="▶ 📁 "+folder.name
+            const tree = document.getElementById("tree")
 
-if(folder.children.length===0){
+            tree.innerHTML = ""
 
-let del=document.createElement("button")
-del.textContent="🗑"
-del.style.marginLeft="6px"
+            data.forEach((folder, fIndex) => {
 
-del.onclick=async(e)=>{
+                let folderDiv = document.createElement("div")
+                folderDiv.className = "folder"
+                let arrow = "▶"
+                folderDiv.innerHTML = arrow + " 📁 " + folder.name
 
-e.stopPropagation()
+                if (folder.children.length === 0) {
 
-if(confirm("Delete empty folder?")){
+                    let del = document.createElement("button")
+                    del.textContent = "🗑"
+                    del.style.marginLeft = "6px"
 
-data.splice(fIndex,1)
+                    del.onclick = async (e) => {
 
-if(activeFolderIndex===fIndex){
-activeFolderIndex=null
-}
+                        e.stopPropagation()
 
-await saveBookmarks()
+                        if (confirm("Delete empty folder?")) {
 
-render()
+                            data.splice(fIndex, 1)
 
-}
+                            if (activeFolderIndex === fIndex) {
+                                activeFolderIndex = null
+                            }
 
-}
+                            await saveBookmarks()
 
-folderDiv.appendChild(del)
+                            render()
 
-}
+                        }
 
-if(activeFolderIndex===fIndex){
-folderDiv.style.background="#dbeafe"
-}
+                    }
 
-let children=document.createElement("div")
-children.className="hidden"
+                    folderDiv.appendChild(del)
 
-folderDiv.onclick=()=>{
+                }
 
-activeFolderIndex=fIndex
+                if (activeFolderIndex === fIndex) {
+                    folderDiv.style.background = "#dbeafe"
+                }
 
-if(children.classList.contains("hidden")){
-children.classList.remove("hidden")
-}else{
-children.classList.add("hidden")
-}
+                let children = document.createElement("div")
+                children.className = "hidden"
 
-renderHighlight()
+                folderDiv.onclick = () => {
 
-}
+                    activeFolderIndex = fIndex
 
-folder.children.forEach((b,bIndex)=>{
+                    if (children.classList.contains("hidden")) {
+                        children.classList.remove("hidden")
+                        folderDiv.innerHTML = "▼ 📁 " + folder.name
+                    } else {
+                        children.classList.add("hidden")
+                        folderDiv.innerHTML = "▶ 📁 " + folder.name
+                    }
 
-let row=document.createElement("div")
-row.className="bookmark"
+                    renderHighlight()
 
-let icon=document.createElement("img")
-icon.src=favicon(b.url)
+                }
 
-let link=document.createElement("a")
-link.href=b.url
-link.target="_blank"
-link.textContent=b.name
+                folder.children.forEach((b, bIndex) => {
 
-let del=document.createElement("button")
-del.textContent="❌"
-del.style.marginLeft="8px"
+                    let row = document.createElement("div")
+                    row.className = "bookmark"
 
-del.onclick=async(e)=>{
+                    let icon = document.createElement("img")
+                    icon.src = favicon(b.url)
 
-e.stopPropagation()
+                    let link = document.createElement("a")
+                    link.href = b.url
+                    link.target = "_blank"
+                    link.textContent = b.name
 
-if(confirm("Delete bookmark?")){
+                    let del = document.createElement("button")
+                    del.textContent = "❌"
+                    del.style.marginLeft = "8px"
 
-data[fIndex].children.splice(bIndex,1)
+                    del.onclick = async (e) => {
 
-await saveBookmarks()
+                        e.stopPropagation()
 
-render()
+                        if (confirm("Delete bookmark?")) {
 
-}
+                            data[fIndex].children.splice(bIndex, 1)
 
-}
+                            await saveBookmarks()
 
-row.appendChild(icon)
-row.appendChild(link)
-row.appendChild(del)
+                            render()
 
-children.appendChild(row)
+                        }
 
-})
+                    }
 
-tree.appendChild(folderDiv)
-tree.appendChild(children)
+                    row.appendChild(icon)
+                    row.appendChild(link)
+                    row.appendChild(del)
 
-})
+                    children.appendChild(row)
 
-renderHighlight()
+                })
 
-}
+                tree.appendChild(folderDiv)
+                tree.appendChild(children)
 
-function renderHighlight(){
+            })
 
-const folders=document.querySelectorAll(".folder")
+            renderHighlight()
 
-folders.forEach((f,i)=>{
+        }
 
-if(i===activeFolderIndex){
-f.style.background="#dbeafe"
-}else{
-f.style.background=""
-}
+        function renderHighlight() {
 
-})
+            const folders = document.querySelectorAll(".folder")
 
-}
+            folders.forEach((f, i) => {
 
-const tree=document.getElementById("tree")
+                if (i === activeFolderIndex) {
+                    f.style.background = "#dbeafe"
+                } else {
+                    f.style.background = ""
+                }
 
-tree.innerHTML=""
+            })
 
-data.forEach((folder,fIndex)=>{
+        }
 
-let folderDiv=document.createElement("div")
 
-folderDiv.className="folder"
+        async function addFolder() {
 
-folderDiv.innerHTML="▶ 📁 "+folder.name
+            let name = prompt("Folder name")
 
-if(activeFolderIndex===fIndex){
-folderDiv.style.background="#dbeafe"
-}
+            if (!name) return
 
-let children=document.createElement("div")
-children.className="hidden"
+            data.push({
+                name: name,
+                children: []
+            })
 
-folderDiv.onclick=()=>{
+            await saveBookmarks()
+            render()
 
-activeFolderIndex=fIndex
-render()
+        }
 
-}
 
-folder.children.forEach((b,bIndex)=>{
+        async function addBookmark() {
 
-let row=document.createElement("div")
-row.className="bookmark"
+            if (activeFolderIndex === null) {
+                alert("Select a folder first")
+                return
+            }
 
-let icon=document.createElement("img")
-icon.src=favicon(b.url)
+            document.getElementById("bmName").value = ""
+            document.getElementById("bmUrl").value = ""
 
-let link=document.createElement("a")
-link.href=b.url
-link.target="_blank"
-link.textContent=b.name
+            document.getElementById("inputPanel").style.display = "block"
 
-let del=document.createElement("button")
-del.textContent="❌"
-del.style.marginLeft="8px"
+        }
 
-del.onclick=async(e)=>{
+        async function saveBookmarkInput() {
 
-e.stopPropagation()
+            let name = document.getElementById("bmName").value
+            let url = document.getElementById("bmUrl").value
 
-if(confirm("Delete bookmark?")){
+            if (!name || !url) return
 
-data[fIndex].children.splice(bIndex,1)
+            url = fixUrl(url)
 
-await saveBookmarks()
+            data[activeFolderIndex].children.push({
+                name: name,
+                url: url
+            })
 
-render()
+            await saveBookmarks()
 
-}
+            document.getElementById("inputPanel").style.display = "none"
 
-}
+            render()
 
-row.appendChild(icon)
-row.appendChild(link)
-row.appendChild(del)
+        }
 
-children.appendChild(row)
+        function cancelInput() {
 
-})
+            document.getElementById("inputPanel").style.display = "none"
 
-tree.appendChild(folderDiv)
-tree.appendChild(children)
+        }
+        function performSearch() {
 
-})
+            let term = document.getElementById("search").value.toLowerCase()
 
-async function addFolder(){
+            searchResults = []
 
-let name=prompt("Folder name")
+            data.forEach((folder, fIndex) => {
 
-if(!name)return
+                folder.children.forEach((b, bIndex) => {
 
-data.push({
-name:name,
-children:[]
-})
+                    if (b.name.toLowerCase().includes(term) ||
+                        b.url.toLowerCase().includes(term)) {
 
-await saveBookmarks()
-render()
+                        searchResults.push({ fIndex, bIndex })
 
-}
+                    }
 
+                })
 
-async function addBookmark(){
+            })
 
-if(activeFolderIndex===null){
+            currentSearchIndex = 0
 
-alert("Select a folder first")
+            highlightSearchResult()
 
-return
+        }
 
-}
 
-let name=prompt("Bookmark name")
+        function highlightSearchResult() {
 
-let url=prompt("URL")
+            if (searchResults.length === 0) return
 
-if(!name||!url)return
+            let result = searchResults[currentSearchIndex]
 
-url=fixUrl(url)
+            activeFolderIndex = result.fIndex
 
-data[activeFolderIndex].children.push({
-name:name,
-url:url
-})
+            render()
 
-await saveBookmarks()
-render()
+            let tree = document.getElementById("tree")
 
-}
+            let children = tree.children[result.fIndex * 2 + 1]
 
+            children.classList.remove("hidden")
 
-function performSearch(){
+            let bookmark = children.children[result.bIndex]
 
-let term=document.getElementById("search").value.toLowerCase()
+            bookmark.style.background = "#fde68a"
 
-searchResults=[]
+        }
 
-data.forEach((folder,fIndex)=>{
 
-folder.children.forEach((b,bIndex)=>{
+        function nextResult() {
 
-if(b.name.toLowerCase().includes(term) ||
-b.url.toLowerCase().includes(term)){
+            if (searchResults.length === 0) return
 
-searchResults.push({fIndex,bIndex})
+            currentSearchIndex++
 
-}
+            if (currentSearchIndex >= searchResults.length) {
+                currentSearchIndex = 0
+            }
 
-})
+            highlightSearchResult()
 
-})
+        }
 
-currentSearchIndex=0
 
-highlightSearchResult()
+        function prevResult() {
 
-}
+            if (searchResults.length === 0) return
 
+            currentSearchIndex--
 
-function highlightSearchResult(){
+            if (currentSearchIndex < 0) {
+                currentSearchIndex = searchResults.length - 1
+            }
 
-if(searchResults.length===0) return
+            highlightSearchResult()
 
-let result=searchResults[currentSearchIndex]
+        }
 
-activeFolderIndex=result.fIndex
+        function exportBookmarks() {
 
-render()
+            let dataStr = JSON.stringify(data, null, 2)
+            let blob = new Blob([dataStr], { type: "application/json" })
+            let a = document.createElement("a")
+            a.href = URL.createObjectURL(blob)
+            a.download = "bookmarks.json"
+            a.click()
+        }
 
-let tree=document.getElementById("tree")
+        loadBookmarks()
 
-let children=tree.children[result.fIndex*2+1]
-
-children.classList.remove("hidden")
-
-let bookmark=children.children[result.bIndex]
-
-bookmark.style.background="#fde68a"
-
-}
-
-
-function nextResult(){
-
-if(searchResults.length===0) return
-
-currentSearchIndex++
-
-if(currentSearchIndex>=searchResults.length){
-currentSearchIndex=0
-}
-
-highlightSearchResult()
-
-}
-
-
-function prevResult(){
-
-if(searchResults.length===0) return
-
-currentSearchIndex--
-
-if(currentSearchIndex<0){
-currentSearchIndex=searchResults.length-1
-}
-
-highlightSearchResult()
-
-}
-
-
-loadBookmarks()
-
-</script>
+    </script>
 </body>
+
 </html>
