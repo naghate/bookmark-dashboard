@@ -86,16 +86,18 @@
     </div>
 
     <div id="inputPanel" style="display:none;margin-bottom:8px">
-
         Name:
         <input id="bmName" size="15">
-
         URL:
         <input id="bmUrl" size="25">
-
         <button onclick="saveBookmarkInput()">Save</button>
         <button onclick="cancelInput()">Cancel</button>
-
+    </div>
+    <div id="folderPanel" style="display:none;margin-bottom:8px;background:#eef2ff;padding:6px;border-radius:4px">
+        Folder Name:
+        <input id="folderName" size="20">
+        <button onclick="saveFolderInput()">Create</button>
+        <button onclick="cancelFolderInput()">Cancel</button>
     </div>
 
     <div id="tree"></div>
@@ -316,23 +318,24 @@
 
         }
 
-
-        async function addFolder() {
-
-            let name = prompt("Folder name")
-
+        async function saveFolderInput() {
+            let name = document.getElementById("folderName").value
             if (!name) return
-
             data.push({
                 name: name,
                 children: []
             })
-
             await saveBookmarks()
+            document.getElementById("folderPanel").style.display = "none"
             render()
-
         }
-
+        async function addFolder() {
+            document.getElementById("folderName").value=""
+            document.getElementById("folderPanel").style.display="block"
+        }
+        function cancelFolderInput(){
+            document.getElementById("folderPanel").style.display="none"
+    }
 
         async function addBookmark() {
 
