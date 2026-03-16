@@ -171,7 +171,11 @@
                 saveBookmarks()
 
             }
-
+            data.forEach(folder => {
+                if (folder.open === undefined) {
+                    folder.open = false
+                }
+            })
             render()
 
         }
@@ -185,120 +189,118 @@
 
         }
 
-
         function render() {
-
-            const tree = document.getElementById("tree")
-
-            tree.innerHTML = ""
+            const tree = document.getElementById("tree");
+            tree.innerHTML = "";
 
             data.forEach((folder, fIndex) => {
+                // Folder container
+                let folderDiv = document.createElement("div");
+                folderDiv.className = "folder";
 
-                let folderDiv = document.createElement("div")
-                folderDiv.className = "folder"
-                let arrow = "▶"
-                folderDiv.innerHTML = arrow + " 📁 " + folder.name
+                // Arrow for open/close
+                let arrowSpan = document.createElement("span");
+                arrowSpan.textContent = folder.open ? "▼" : "▶";
+                arrowSpan.style.cursor = "pointer";
 
+                // Folder name
+                let nameSpan = document.createElement("span");
+                nameSpan.textContent = " 📁 " + folder.name;
+
+                folderDiv.appendChild(arrowSpan);
+                folderDiv.appendChild(nameSpan);
+
+                // Delete button for empty folders
                 if (folder.children.length === 0) {
-                    let del = document.createElement("button")
-                    del.textContent = "🗑"
-                    del.style.marginLeft = "6px"
+                    let del = document.createElement("button");
+                    del.textContent = "🗑";
+                    del.style.marginLeft = "6px";
+                    del.dataset.confirm = "false";
                     del.onclick = async (e) => {
-                        e.stopPropagation()
+                        e.stopPropagation();
+                        // No popup; simple two-step confirm with ⚠
                         if (del.dataset.confirm === "true") {
-                            data.splice(fIndex, 1)
-                            if (activeFolderIndex === fIndex) {
-                                activeFolderIndex = null
-                            }
-                            await saveBookmarks()
-                            render()
+                            data.splice(fIndex, 1);
+                            if (activeFolderIndex === fIndex) activeFolderIndex = null;
+                            await saveBookmarks();
+                            render();
                         } else {
-                            del.textContent = "⚠"
-                            del.dataset.confirm = "true"
+                            del.textContent = "⚠";
+                            del.dataset.confirm = "true";
                             setTimeout(() => {
-                                del.textContent = "🗑"
-                                del.dataset.confirm = "false"
-                            }, 2000)
+                                del.textContent = "🗑";
+                                del.dataset.confirm = "false";
+                            }, 2000);
                         }
-                    }
-                    folderDiv.appendChild(del)
+                    };
+                    folderDiv.appendChild(del);
                 }
 
-                if (activeFolderIndex === fIndex) {
-                    folderDiv.style.background = "#dbeafe"
-                }
+                // Highlight active folder
+                if (activeFolderIndex === fIndex) folderDiv.style.background = "#dbeafe";
 
-                let children = document.createElement("div")
-                children.className = "hidden"
+                // Children container
+                let childrenDiv = document.createElement("div");
+                childrenDiv.className = folder.open ? "" : "hidden";
 
-                folderDiv.onclick = () => {
+                // Folder click toggles open/close
+                folderDiv.onclick = async () => {
+                    activeFolderIndex = fIndex;
+                    folder.open = !folder.open;
+                    childrenDiv.className = folder.open ? "" : "hidden";
+                    arrowSpan.textContent = folder.open ? "▼" : "▶";
+                    await saveBookmarks();
+                    renderHighlight();
+                };
 
-                    activeFolderIndex = fIndex
-
-                    if (children.classList.contains("hidden")) {
-                        children.classList.remove("hidden")
-                        folderDiv.innerHTML = "▼ 📁 " + folder.name
-                    } else {
-                        children.classList.add("hidden")
-                        folderDiv.innerHTML = "▶ 📁 " + folder.name
-                    }
-
-                    renderHighlight()
-
-                }
-
+                // Render bookmarks
                 folder.children.forEach((b, bIndex) => {
+                    let row = document.createElement("div");
+                    row.className = "bookmark";
 
-                    let row = document.createElement("div")
-                    row.className = "bookmark"
+                    let icon = document.createElement("img");
+                    icon.src = favicon(b.url);
 
-                    let icon = document.createElement("img")
-                    icon.src = favicon(b.url)
+                    let link = document.createElement("a");
+                    link.href = b.url;
+                    link.target = "_blank";
+                    link.textContent = b.name;
 
-                    let link = document.createElement("a")
-                    link.href = b.url
-                    link.target = "_blank"
-                    link.textContent = b.name
-
-                    let del = document.createElement("button")
-                    del.textContent = "❌"
-                    del.style.marginLeft = "8px"
+                    let del = document.createElement("button");
+                    del.textContent = "❌";
+                    del.style.marginLeft = "8px";
+                    del.dataset.confirm = "false";
 
                     del.onclick = async (e) => {
-                        e.stopPropagation()
-                        del.onclick = async (e) => {
-                            e.stopPropagation()
-                            if (del.dataset.confirm === "true") {
-                                data[fIndex].children.splice(bIndex, 1)
-                                await saveBookmarks()
-                                render()
-                            } else {
-                                del.textContent = "⚠"
-                                del.dataset.confirm = "true"
-                                setTimeout(() => {
-                                    del.textContent = "❌"
-                                    del.dataset.confirm = "false"
-                                }, 2000)
-                            }
+                        e.stopPropagation();
+                        if (del.dataset.confirm === "true") {
+                            data[fIndex].children.splice(bIndex, 1);
+                            await saveBookmarks();
+                            render();
+                        } else {
+                            del.textContent = "⚠";
+                            del.dataset.confirm = "true";
+                            setTimeout(() => {
+                                del.textContent = "❌";
+                                del.dataset.confirm = "false";
+                            }, 2000);
                         }
-                    }
+                    };
 
-                    row.appendChild(icon)
-                    row.appendChild(link)
-                    row.appendChild(del)
+                    row.appendChild(icon);
+                    row.appendChild(link);
+                    row.appendChild(del);
 
-                    children.appendChild(row)
+                    childrenDiv.appendChild(row);
+                });
 
-                })
+                tree.appendChild(folderDiv);
+                tree.appendChild(childrenDiv);
+            });
 
-                tree.appendChild(folderDiv)
-                tree.appendChild(children)
-
-            })
-
-            renderHighlight()
-
+            renderHighlight();
         }
+
 
         function renderHighlight() {
 
@@ -321,6 +323,7 @@
             if (!name) return
             data.push({
                 name: name,
+                open: false,
                 children: []
             })
             await saveBookmarks()
@@ -405,25 +408,30 @@
 
 
         function highlightSearchResult() {
-
             if (searchResults.length === 0) return
 
             let result = searchResults[currentSearchIndex]
 
+            // Set the active folder
             activeFolderIndex = result.fIndex
+
+            // Auto-open the folder
+            data[activeFolderIndex].open = true
 
             render()
 
             let tree = document.getElementById("tree")
 
-            let children = tree.children[result.fIndex * 2 + 1]
-
+            // Get the children div of the active folder
+            let children = tree.children[activeFolderIndex * 2 + 1]
             children.classList.remove("hidden")
 
+            // Highlight the bookmark
             let bookmark = children.children[result.bIndex]
-
             bookmark.style.background = "#fde68a"
 
+            // Optional: scroll into view
+            bookmark.scrollIntoView({ behavior: "smooth", block: "center" })
         }
 
 
