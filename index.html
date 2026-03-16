@@ -200,33 +200,28 @@
                 folderDiv.innerHTML = arrow + " 📁 " + folder.name
 
                 if (folder.children.length === 0) {
-
                     let del = document.createElement("button")
                     del.textContent = "🗑"
                     del.style.marginLeft = "6px"
-
                     del.onclick = async (e) => {
-
                         e.stopPropagation()
-
-                        if (confirm("Delete empty folder?")) {
-
+                        if (del.dataset.confirm === "true") {
                             data.splice(fIndex, 1)
-
                             if (activeFolderIndex === fIndex) {
                                 activeFolderIndex = null
                             }
-
                             await saveBookmarks()
-
                             render()
-
+                        } else {
+                            del.textContent = "⚠"
+                            del.dataset.confirm = "true"
+                            setTimeout(() => {
+                                del.textContent = "🗑"
+                                del.dataset.confirm = "false"
+                            }, 2000)
                         }
-
                     }
-
                     folderDiv.appendChild(del)
-
                 }
 
                 if (activeFolderIndex === fIndex) {
@@ -270,19 +265,22 @@
                     del.style.marginLeft = "8px"
 
                     del.onclick = async (e) => {
-
                         e.stopPropagation()
-
-                        if (confirm("Delete bookmark?")) {
-
-                            data[fIndex].children.splice(bIndex, 1)
-
-                            await saveBookmarks()
-
-                            render()
-
+                        del.onclick = async (e) => {
+                            e.stopPropagation()
+                            if (del.dataset.confirm === "true") {
+                                data[fIndex].children.splice(bIndex, 1)
+                                await saveBookmarks()
+                                render()
+                            } else {
+                                del.textContent = "⚠"
+                                del.dataset.confirm = "true"
+                                setTimeout(() => {
+                                    del.textContent = "❌"
+                                    del.dataset.confirm = "false"
+                                }, 2000)
+                            }
                         }
-
                     }
 
                     row.appendChild(icon)
@@ -330,12 +328,12 @@
             render()
         }
         async function addFolder() {
-            document.getElementById("folderName").value=""
-            document.getElementById("folderPanel").style.display="block"
+            document.getElementById("folderName").value = ""
+            document.getElementById("folderPanel").style.display = "block"
         }
-        function cancelFolderInput(){
-            document.getElementById("folderPanel").style.display="none"
-    }
+        function cancelFolderInput() {
+            document.getElementById("folderPanel").style.display = "none"
+        }
 
         async function addBookmark() {
 
@@ -467,10 +465,31 @@
             a.download = "bookmarks.json"
             a.click()
         }
-
+        document.getElementById("folderName").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                saveFolderInput()
+            }
+        })
+        document.getElementById("bmName").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                saveBookmarkInput()
+            }
+        })
+        document.getElementById("bmUrl").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                saveBookmarkInput()
+            }
+        })
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+                document.getElementById("inputPanel").style.display = "none"
+                document.getElementById("folderPanel").style.display = "none"
+            }
+        })
         loadBookmarks()
 
     </script>
+
 </body>
 
 </html>
