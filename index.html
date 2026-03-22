@@ -59,12 +59,23 @@
             background: rgba(99, 102, 241, 0.15);
         }
         .folder, .bookmark {
-            transition: background 0.2s ease, transform 0.1s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
         }
 
         .folder:active, .bookmark:active {
-            transform: scale(0.98);
+            transform: none;
         }
+        
+        .folder:hover {
+            background: rgba(99, 102, 241, 0.12);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .bookmark:hover {
+            background: rgba(0, 0, 0, 0.04);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
 
         .bookmark {
             margin-left: 16px;
@@ -72,6 +83,15 @@
             padding: 2px 4px;
             border-radius: 3px;
             transition: all 0.15s ease;
+            display: flex;           /* align everything in one row */
+            align-items: center;     /* vertically center items */
+            gap: 4px;                /* space between icon/buttons and text */
+            flex-wrap: wrap;         /* allow wrapping if name is long */
+        }
+        .bookmark button {
+            font-size: 10px;         /* smaller buttons */
+            padding: 1px 4px;        /* smaller padding */
+            margin-left: 0;          /* remove extra left margin, gap handles spacing */
         }
 
         .bookmark:hover {
@@ -447,7 +467,7 @@
 
                         row.appendChild(editBtn)
                         row.appendChild(del)
-
+                        row.appendChild(content)  // row just holds the flex container
                         parentDiv.appendChild(row)
                     }
 
