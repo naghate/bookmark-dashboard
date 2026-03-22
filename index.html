@@ -83,6 +83,9 @@
         <button onclick="performSearch()">Search</button>
         <button onclick="prevResult()">Prev</button>
         <button onclick="nextResult()">Next</button>
+
+        <input type="file" id="importFile" accept=".html" style="display:none">
+        <button onclick="triggerImport()">Import</button>
     </div>
 
     <div id="inputPanel" style="display:none;margin-bottom:8px">
@@ -432,6 +435,96 @@
 
         }
 
+        function triggerImport() {
+            document.getElementById("importFile").click()
+        }
+
+        function parseBookmarkHTML(html) {
+
+            let parser = new DOMParser()
+            let doc = parser.parseFromString(html, "text/html")
+
+            function parseDL(dl) {
+                let items = []
+
+                let children = dl.children
+
+                for (let i = 0; i < children.length; i++) {
+
+                    let node = children[i]
+
+                    if (node.tagName === "DT") {
+
+                        let h3 = node.querySelector("h3")
+                        let a = node.querySelector("a")
+
+                        // -------- FOLDER --------
+                        if (h3) {
+
+                            let nextDL = node.nextElementSibling
+
+                            let folder = {
+                                name: h3.textContent,
+                                open: false,
+                                children: []
+                            }
+
+                            if (nextDL && nextDL.tagName === "DL") {
+                                folder.children = parseDL(nextDL)
+                            }
+
+                            items.push(folder)
+                        }
+
+                        // -------- BOOKMARK --------
+                        else if (a) {
+
+                            items.push({
+                                name: a.textContent,
+                                url: a.href
+                            })
+                        }
+                    }
+                }
+
+                return items
+            }
+
+            let rootDL = doc.querySelector("DL")
+
+            if (!rootDL) return []
+
+            return parseDL(rootDL)
+        }
+
+        async function handleImport(event) {
+
+            let file = event.target.files[0]
+            if (!file) return
+
+            let text = await file.text()
+
+            let importedData = parseBookmarkHTML(text)
+
+            if (importedData.length === 0) {
+                alert("Invalid bookmark file")
+                return
+            }
+
+            // OPTION: merge into active folder or root
+            if (activeFolder) {
+                activeFolder.children.push(...importedData)
+            } else {
+                data.push(...importedData)
+            }
+
+            await saveBookmarks()
+
+            render()
+
+            // reset input so same file can be re-imported
+            event.target.value = ""
+        }
         function exportBookmarks() {
 
             let dataStr = JSON.stringify(data, null, 2)
@@ -462,6 +555,7 @@
                 document.getElementById("folderPanel").style.display = "none"
             }
         })
+        document.getElementById("importFile").addEventListener("change", handleImport)
         loadBookmarks()
 
     </script>
