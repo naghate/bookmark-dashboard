@@ -335,6 +335,12 @@
                             render()
                         }
 
+                        name.onclick = (e) => {
+                            e.stopPropagation()
+                            activeFolder = item
+                            render()
+                        }
+
                         parentDiv.appendChild(folderDiv)
 
                         // children container
