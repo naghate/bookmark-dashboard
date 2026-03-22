@@ -58,6 +58,13 @@
         .folder:hover {
             background: rgba(99, 102, 241, 0.15);
         }
+        .folder, .bookmark {
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .folder:active, .bookmark:active {
+            transform: scale(0.98);
+        }
 
         .bookmark {
             margin-left: 16px;
@@ -146,6 +153,7 @@
         let activeFolder = null
         let searchResults = []
         let currentSearchIndex = 0
+        let editItem = null
 
 
         function fixUrl(url) {
@@ -197,11 +205,15 @@
                 saveBookmarks()
 
             }
-            data.forEach(folder => {
-                if (folder.open === undefined) {
-                    folder.open = false
-                }
-            })
+            function normalize(items) {
+                items.forEach(item => {
+                    if (item.children) {
+                        if (item.open === undefined) item.open = false
+                        normalize(item.children)
+                    }
+                })
+            }
+            normalize(data)
             render()
 
         }
@@ -232,10 +244,62 @@
                         arrow.textContent = item.open ? "▼" : "▶"
 
                         let name = document.createElement("span")
-                        name.textContent = " 📁 " + item.name
+
+                        if (editItem === item) {
+
+                            let input = document.createElement("input")
+                            input.value = item.name
+                            input.style.fontSize = "11px"
+
+                            input.onblur = async () => {
+                                item.name = input.value || item.name
+                                editItem = null
+                                await saveBookmarks()
+                                render()
+                            }
+
+                            input.onkeydown = async (e) => {
+                                if (e.key === "Enter") {
+                                    input.blur()
+                                }
+                            }
+                            setTimeout(() => input.focus(), 0)
+                            name.appendChild(input)
+
+                        } else {
+
+                            name.textContent = " 📁 " + item.name
+
+                            // double-click to edit
+                            name.ondblclick = (e) => {
+                                e.stopPropagation()
+                                editItem = item
+                                render()
+                            }
+                        }
 
                         folderDiv.appendChild(arrow)
                         folderDiv.appendChild(name)
+                        folderDiv.onclick = (e) => {
+                            if (["BUTTON", "INPUT"].includes(e.target.tagName)) return
+                        }
+                        if (activeFolder === item) {
+                            folderDiv.style.background = "#dbeafe"
+                            folderDiv.style.border = "1px solid #6366f1"
+                        } else {
+                            folderDiv.style.border = "none"
+                        }
+                        let editBtn = document.createElement("button")
+                        editBtn.textContent = "✏"
+                        editBtn.style.marginLeft = "6px"
+
+                        editBtn.onclick = (e) => {
+                            e.stopPropagation()
+                            editItem = item
+                            render()
+                        }
+
+                        folderDiv.appendChild(editBtn)
 
                         // delete only if empty
                         if (item.children.length === 0) {
@@ -255,9 +319,18 @@
 
                         // toggle open                        
                         folderDiv.onclick = async (e) => {
-                            e.stopPropagation()
-                            item.open = !item.open
-                            activeFolder = item   // IMPORTANT
+
+                            if (["BUTTON", "INPUT"].includes(e.target.tagName)) return
+
+                            // click arrow = toggle only
+                            if (e.target === arrow) {
+                                item.open = !item.open
+                            } else {
+                                // click elsewhere = select + toggle
+                                activeFolder = item
+                                item.open = !item.open
+                            }
+
                             await saveBookmarks()
                             render()
                         }
@@ -270,9 +343,18 @@
                         childrenDiv.className = item.open ? "" : "hidden"
 
                         parentDiv.appendChild(childrenDiv)
-
                         // RECURSION
                         renderItems(item.children, childrenDiv)
+
+                        // show empty ONLY if no children rendered
+                        if (item.children.length === 0) {
+                            let empty = document.createElement("div")
+                            empty.textContent = "(empty)"
+                            empty.style.fontSize = "10px"
+                            empty.style.opacity = "0.6"
+                            empty.style.marginLeft = "16px"
+                            childrenDiv.appendChild(empty)
+                        }
                     }
 
                     // -------- BOOKMARK --------
@@ -281,13 +363,59 @@
                         let row = document.createElement("div")
                         row.className = "bookmark"
 
-                        let icon = document.createElement("img")
-                        icon.src = favicon(item.url)
+                        let content = document.createElement("div")
 
-                        let link = document.createElement("a")
-                        link.href = item.url
-                        link.target = "_blank"
-                        link.textContent = item.name
+                        if (editItem === item) {
+
+                            let nameInput = document.createElement("input")
+                            
+                            nameInput.value = item.name
+                            nameInput.placeholder = "Name"
+                            nameInput.style.fontSize = "11px"
+
+                            let urlInput = document.createElement("input")
+                            urlInput.value = item.url
+                            urlInput.placeholder = "URL"
+                            urlInput.style.fontSize = "11px"
+                            urlInput.style.marginLeft = "4px"
+
+                            let save = document.createElement("button")
+                            save.textContent = "✔"
+
+                            save.onclick = async (e) => {
+                                e.stopPropagation()
+                                item.name = nameInput.value || item.name
+                                item.url = fixUrl(urlInput.value || item.url)
+                                editItem = null
+                                await saveBookmarks()
+                                render()
+                            }
+
+                            content.appendChild(nameInput)
+                            content.appendChild(urlInput)
+                            content.appendChild(save)
+
+                        } else {
+
+                            let icon = document.createElement("img")
+                            icon.src = favicon(item.url)
+
+                            let link = document.createElement("a")
+                            link.href = item.url
+                            link.target = "_blank"
+                            link.textContent = item.name
+
+                            // double-click to edit
+                            link.ondblclick = (e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                editItem = item
+                                render()
+                            }
+
+                            content.appendChild(icon)
+                            content.appendChild(link)
+                        }
 
                         let del = document.createElement("button")
                         del.textContent = "❌"
@@ -300,8 +428,18 @@
                             render()
                         }
 
-                        row.appendChild(icon)
-                        row.appendChild(link)
+                        row.appendChild(content)
+                        let editBtn = document.createElement("button")
+                        editBtn.textContent = "✏"
+                        editBtn.style.marginLeft = "6px"
+
+                        editBtn.onclick = (e) => {
+                            e.stopPropagation()
+                            editItem = item
+                            render()
+                        }
+
+                        row.appendChild(editBtn)
                         row.appendChild(del)
 
                         parentDiv.appendChild(row)
@@ -540,7 +678,7 @@
             } else {
                 data.push(...importedData)
             }
-
+            activeFolder = null
             await saveBookmarks()
 
             render()
