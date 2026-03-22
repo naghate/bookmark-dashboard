@@ -117,7 +117,7 @@
         const db = firebase.firestore()
 
         let data = []
-        let activeFolderIndex = null
+        let activeFolder = null
         let searchResults = []
         let currentSearchIndex = 0
 
@@ -190,115 +190,101 @@
         }
 
         function render() {
-            const tree = document.getElementById("tree");
-            tree.innerHTML = "";
+            const tree = document.getElementById("tree")
+            tree.innerHTML = ""
 
-            data.forEach((folder, fIndex) => {
-                // Folder container
-                let folderDiv = document.createElement("div");
-                folderDiv.className = "folder";
+            function renderItems(items, parentDiv) {
+                items.forEach((item, index) => {
 
-                // Arrow for open/close
-                let arrowSpan = document.createElement("span");
-                arrowSpan.textContent = folder.open ? "▼" : "▶";
-                arrowSpan.style.cursor = "pointer";
+                    // -------- FOLDER --------
+                    if (item.children) {
 
-                // Folder name
-                let nameSpan = document.createElement("span");
-                nameSpan.textContent = " 📁 " + folder.name;
+                        let folderDiv = document.createElement("div")
+                        folderDiv.className = "folder"
 
-                folderDiv.appendChild(arrowSpan);
-                folderDiv.appendChild(nameSpan);
+                        let arrow = document.createElement("span")
+                        arrow.textContent = item.open ? "▼" : "▶"
 
-                // Delete button for empty folders
-                if (folder.children.length === 0) {
-                    let del = document.createElement("button");
-                    del.textContent = "🗑";
-                    del.style.marginLeft = "6px";
-                    del.dataset.confirm = "false";
-                    del.onclick = async (e) => {
-                        e.stopPropagation();
-                        // No popup; simple two-step confirm with ⚠
-                        if (del.dataset.confirm === "true") {
-                            data.splice(fIndex, 1);
-                            if (activeFolderIndex === fIndex) activeFolderIndex = null;
-                            await saveBookmarks();
-                            render();
-                        } else {
-                            del.textContent = "⚠";
-                            del.dataset.confirm = "true";
-                            setTimeout(() => {
-                                del.textContent = "🗑";
-                                del.dataset.confirm = "false";
-                            }, 2000);
+                        let name = document.createElement("span")
+                        name.textContent = " 📁 " + item.name
+
+                        folderDiv.appendChild(arrow)
+                        folderDiv.appendChild(name)
+
+                        // delete only if empty
+                        if (item.children.length === 0) {
+                            let del = document.createElement("button")
+                            del.textContent = "🗑"
+                            del.style.marginLeft = "6px"
+
+                            del.onclick = async (e) => {
+                                e.stopPropagation()
+                                items.splice(index, 1)
+                                await saveBookmarks()
+                                render()
+                            }
+
+                            folderDiv.appendChild(del)
                         }
-                    };
-                    folderDiv.appendChild(del);
-                }
 
-                // Highlight active folder
-                if (activeFolderIndex === fIndex) folderDiv.style.background = "#dbeafe";
-
-                // Children container
-                let childrenDiv = document.createElement("div");
-                childrenDiv.className = folder.open ? "" : "hidden";
-
-                // Folder click toggles open/close
-                folderDiv.onclick = async () => {
-                    activeFolderIndex = fIndex;
-                    folder.open = !folder.open;
-                    childrenDiv.className = folder.open ? "" : "hidden";
-                    arrowSpan.textContent = folder.open ? "▼" : "▶";
-                    await saveBookmarks();
-                    renderHighlight();
-                };
-
-                // Render bookmarks
-                folder.children.forEach((b, bIndex) => {
-                    let row = document.createElement("div");
-                    row.className = "bookmark";
-
-                    let icon = document.createElement("img");
-                    icon.src = favicon(b.url);
-
-                    let link = document.createElement("a");
-                    link.href = b.url;
-                    link.target = "_blank";
-                    link.textContent = b.name;
-
-                    let del = document.createElement("button");
-                    del.textContent = "❌";
-                    del.style.marginLeft = "8px";
-                    del.dataset.confirm = "false";
-
-                    del.onclick = async (e) => {
-                        e.stopPropagation();
-                        if (del.dataset.confirm === "true") {
-                            data[fIndex].children.splice(bIndex, 1);
-                            await saveBookmarks();
-                            render();
-                        } else {
-                            del.textContent = "⚠";
-                            del.dataset.confirm = "true";
-                            setTimeout(() => {
-                                del.textContent = "❌";
-                                del.dataset.confirm = "false";
-                            }, 2000);
+                        // toggle open                        
+                        folderDiv.onclick = async (e) => {
+                            e.stopPropagation()
+                            item.open = !item.open
+                            activeFolder = item   // IMPORTANT
+                            await saveBookmarks()
+                            render()
                         }
-                    };
 
-                    row.appendChild(icon);
-                    row.appendChild(link);
-                    row.appendChild(del);
+                        parentDiv.appendChild(folderDiv)
 
-                    childrenDiv.appendChild(row);
-                });
+                        // children container
+                        let childrenDiv = document.createElement("div")
+                        childrenDiv.style.marginLeft = "16px"
+                        childrenDiv.className = item.open ? "" : "hidden"
 
-                tree.appendChild(folderDiv);
-                tree.appendChild(childrenDiv);
-            });
+                        parentDiv.appendChild(childrenDiv)
 
-            renderHighlight();
+                        // RECURSION
+                        renderItems(item.children, childrenDiv)
+                    }
+
+                    // -------- BOOKMARK --------
+                    else {
+
+                        let row = document.createElement("div")
+                        row.className = "bookmark"
+
+                        let icon = document.createElement("img")
+                        icon.src = favicon(item.url)
+
+                        let link = document.createElement("a")
+                        link.href = item.url
+                        link.target = "_blank"
+                        link.textContent = item.name
+
+                        let del = document.createElement("button")
+                        del.textContent = "❌"
+                        del.style.marginLeft = "8px"
+
+                        del.onclick = async (e) => {
+                            e.stopPropagation()
+                            items.splice(index, 1)
+                            await saveBookmarks()
+                            render()
+                        }
+
+                        row.appendChild(icon)
+                        row.appendChild(link)
+                        row.appendChild(del)
+
+                        parentDiv.appendChild(row)
+                    }
+
+                })
+            }
+
+            renderItems(data, tree)
         }
 
 
@@ -339,39 +325,27 @@
         }
 
         async function addBookmark() {
-
             if (activeFolderIndex === null) {
                 alert("Select a folder first")
                 return
             }
-
             document.getElementById("bmName").value = ""
             document.getElementById("bmUrl").value = ""
-
             document.getElementById("inputPanel").style.display = "block"
-
         }
 
         async function saveBookmarkInput() {
-
             let name = document.getElementById("bmName").value
             let url = document.getElementById("bmUrl").value
-
-            if (!name || !url) return
-
+            if (!name || !url || !activeFolder) return
             url = fixUrl(url)
-
-            data[activeFolderIndex].children.push({
+            activeFolder.children.push({
                 name: name,
                 url: url
             })
-
             await saveBookmarks()
-
             document.getElementById("inputPanel").style.display = "none"
-
             render()
-
         }
 
         function cancelInput() {
