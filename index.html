@@ -6,20 +6,39 @@
     <title>Bookmark Dashboard</title>
 
     <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #ffffff;
+            --accent-hover: #e0e0e0;
+            --highlight-bg: #3a3a3a;
+            --border-color: #444444;
+        }
+
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
             margin: 8px;
-            background: linear-gradient(135deg, #e0e7ff, #f8fafc);
+            background: #000000;
             min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            text-shadow: none;
         }
 
         #toolbar {
             margin-bottom: 10px;
             padding: 6px;
-            background: rgba(255,255,255,0.6);
+            background: rgba(26, 26, 26, 0.9);
             border-radius: 6px;
             backdrop-filter: blur(4px);
+            border: 1px solid #333333;
         }
 
         button {
@@ -27,23 +46,34 @@
             padding: 3px 8px;
             margin-right: 3px;
             cursor: pointer;
-            border: none;
+            border: 1px solid #ffffff;
             border-radius: 4px;
-
-            background: #6366f1;
-            color: white;
-
+            background: #1a1a1a;
+            color: #ffffff;
             transition: 0.2s;
         }
 
         button:hover {
-            background: #4f46e5;
+            background: #ffffff;
+            color: #000000;
+            box-shadow: none;
         }
 
         #search {
             font-size: 11px;
-            padding: 2px;
+            padding: 4px 6px;
             width: 140px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            transition: 0.2s;
+        }
+
+        #search:focus {
+            outline: none;
+            border-color: #ffffff;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
 
         .folder {
@@ -53,11 +83,15 @@
             padding: 4px 6px;
             border-radius: 4px;
             transition: all 0.15s ease;
+            color: var(--text-primary);
         }
 
         .folder:hover {
-            background: rgba(99, 102, 241, 0.15);
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 2px solid #ffffff;
+            padding-left: 4px;
         }
+
         .folder, .bookmark {
             transition: background 0.15s ease, box-shadow 0.15s ease;
         }
@@ -65,17 +99,11 @@
         .folder:active, .bookmark:active {
             transform: none;
         }
-        
-        .folder:hover {
-            background: rgba(99, 102, 241, 0.12);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
 
         .bookmark:hover {
-            background: rgba(0, 0, 0, 0.04);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 1px 2px rgba(255, 255, 255, 0.1);
         }
-        
 
         .bookmark {
             margin-left: 16px;
@@ -83,26 +111,36 @@
             padding: 2px 4px;
             border-radius: 3px;
             transition: all 0.15s ease;
-            display: flex;           /* align everything in one row */
-            align-items: center;     /* vertically center items */
-            gap: 4px;                /* space between icon/buttons and text */
-            flex-wrap: wrap;         /* allow wrapping if name is long */
-        }
-        .bookmark button {
-            font-size: 10px;         /* smaller buttons */
-            padding: 1px 4px;        /* smaller padding */
-            margin-left: 0;          /* remove extra left margin, gap handles spacing */
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+            color: var(--text-primary);
         }
 
-        .bookmark:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .bookmark button {
+            font-size: 10px;
+            padding: 1px 4px;
+            margin-left: 0;
+        }
+
+        .bookmark a {
+            color: #ffffff;
+            text-decoration: none;
+            transition: 0.15s;
+        }
+
+        .bookmark a:hover {
+            color: #e0e0e0;
+            text-decoration: underline;
         }
 
         .bookmark img {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             margin-right: 4px;
             vertical-align: middle;
+            filter: brightness(0.95);
         }
 
         .hidden {
@@ -110,10 +148,33 @@
         }
 
         #inputPanel {
-            background: #eef2ff;
+            background: var(--bg-tertiary);
             padding: 6px;
             border-radius: 4px;
             font-size: 12px;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        #folderPanel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        input[type="text"], input[type="file"] {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 2px 4px;
+            transition: 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #ffffff;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -146,7 +207,7 @@
         <button onclick="saveBookmarkInput()">Save</button>
         <button onclick="cancelInput()">Cancel</button>
     </div>
-    <div id="folderPanel" style="display:none;margin-bottom:8px;background:#eef2ff;padding:6px;border-radius:4px">
+    <div id="folderPanel" style="display:none;margin-bottom:8px;padding:6px;border-radius:4px">
         Folder Name:
         <input id="folderName" size="20">
         <button onclick="saveFolderInput()">Create</button>
@@ -304,8 +365,8 @@
                             if (["BUTTON", "INPUT"].includes(e.target.tagName)) return
                         }
                         if (activeFolder === item) {
-                            folderDiv.style.background = "#dbeafe"
-                            folderDiv.style.border = "1px solid #6366f1"
+                            folderDiv.style.background = "#3a3a3a"
+                            folderDiv.style.border = "1px solid #ffffff"
                         } else {
                             folderDiv.style.border = "none"
                         }
@@ -585,7 +646,7 @@
 
                 links.forEach(link => {
                     if (link.href === result.item.url) {
-                        link.parentElement.style.background = "#fde68a"
+                        link.parentElement.style.background = "#4a4a4a"
                         link.scrollIntoView({ behavior: "smooth", block: "center" })
                     }
                 })
